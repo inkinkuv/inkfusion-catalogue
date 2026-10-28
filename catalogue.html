@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>كتالوج إنك فيوجن | Ink Fusion Catalogue</title>
+<meta name="description" content="كل تصميمات إنك فيوجن في مكان واحد: سيراميك، رخام، لوحات، وأفكار للأماكن. كل تصميم بكوده.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f2a6b">
+<link rel="apple-touch-icon" href="img/icon-192.png">
+<meta name="apple-mobile-web-app-title" content="Ink Fusion">
+<link rel="icon" href="img/mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Cinzel:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#grid">تخطي للتصميمات</a>
+<header class="top"><div class="wrap">
+  <a class="brand" href="index.html" aria-label="Ink Fusion — الرئيسية"><img src="img/mark.png" alt="" width="60" height="36"><span class="word">INKFUSION</span></a>
+  <nav class="nav" aria-label="الأقسام"><a href="index.html">الرئيسية</a><a href="index.html#how">إزاي تطلب</a><a href="index.html#contact">تواصل</a></nav>
+  <a class="btn btn-wa" id="wa-top" href="#" target="_blank" rel="noopener">واتساب</a>
+</div></header>
+
+<main>
+  <div class="wrap cat-head">
+    <h2>كتالوج التصميمات</h2>
+    <p class="sub">دوس على أي تصميم عشان تكبّره، وابعت الكود على واتساب.</p>
+  </div>
+  <div class="tools"><div class="wrap">
+    <div class="row">
+      <input id="q" type="search" placeholder="ابحث بالكود… مثلاً CER0004 أو RM120" aria-label="ابحث بالكود">
+      <select id="style" aria-label="النوع"></select>
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+    <div class="seg" id="groups" role="group" aria-label="الكتالوج"></div>
+  </div></div>
+  <div class="wrap">
+    <div class="grid" id="grid"></div>
+    <div class="more"><button class="btn btn-line" id="more" hidden>عرض المزيد</button></div>
+  </div>
+</main>
+
+<dialog class="lb" id="lb" aria-label="التصميم">
+  <button class="close" id="lb-close" aria-label="إغلاق">✕</button>
+  <div class="body">
+    <div class="pic"><img id="lb-img" alt=""></div>
+    <div class="info">
+      <div class="eyebrow" id="lb-group"></div>
+      <h3 id="lb-code"></h3>
+      <div id="lb-style" class="sub" style="margin:0"></div>
+      <a class="btn btn-wa" id="lb-wa" href="#" target="_blank" rel="noopener">اطلب التصميم ده على واتساب</a>
+      <button class="btn btn-line" id="lb-copy">انسخ الكود</button>
+      <div class="nav-btns">
+        <button class="btn btn-line" id="lb-prev" aria-label="التصميم اللي قبله">→</button>
+        <button class="btn btn-line" id="lb-next" aria-label="التصميم اللي بعده">←</button>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<footer><div class="wrap"><p class="crown">We save the art. We print the future. Indoor × Outdoor</p><p>© Ink Fusion · إنك فيوجن</p></div></footer>
+
+<script src="common.js"></script>
+<script src="data/designs.js"></script>
+<script>
+const D = window.DESIGNS || [];
+const PAGE = 120;
+const st = { g: '', s: '', q: '' };
+let list = [], shown = 0, cur = -1;
+const $ = (id) => document.getElementById(id);
+$('wa-top').href = waLink('السلام عليكم، عايز أستفسر عن تصميم من كتالوج إنك فيوجن');
+
+function fromHash() {
+  const g = decodeURIComponent(location.hash.slice(1));
+  st.g = GROUPS[g] ? g : ''; st.s = '';
+}
+function renderGroups() {
+  const all = [['', `الكل (${D.length.toLocaleString('en-US')})`], ...Object.entries(GROUPS)
+    .filter(([g]) => D.some((d) => d.g === g)).map(([g, m]) => [g, `${m.name} (${D.filter((d) => d.g === g).length.toLocaleString('en-US')})`])];
+  $('groups').innerHTML = all.map(([g, label]) => `<button aria-pressed="${st.g === g}" data-g="${g}">${label}</button>`).join('');
+  $('groups').querySelectorAll('button').forEach((b) => b.onclick = () => {
+    st.g = b.dataset.g; st.s = '';
+    history.replaceState(null, '', st.g ? '#' + st.g : location.pathname);
+    renderGroups(); renderStyles(); apply();
+  });
+}
+function renderStyles() {
+  const pool = D.filter((d) => !st.g || d.g === st.g);
+  const counts = {};
+  pool.forEach((d) => { if (d.s) counts[d.s] = (counts[d.s] || 0) + 1; });
+  const keys = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  $('style').hidden = keys.length < 2;
+  $('style').innerHTML = `<option value="">كل الأنواع</option>` + keys.map((k) => `<option value="${esc(k)}" ${st.s === k ? 'selected' : ''}>${esc(styleName(k))} (${counts[k]})</option>`).join('');
+}
+function apply() {
+  const q = st.q.toLowerCase();
+  list = D.filter((d) => (!st.g || d.g === st.g) && (!st.s || d.s === st.s) && (!q || d.c.toLowerCase().includes(q) || styleName(d.s).includes(st.q)));
+  shown = 0; $('grid').innerHTML = '';
+  $('count').textContent = `${list.length.toLocaleString('en-US')} تصميم`;
+  if (!list.length) { $('grid').innerHTML = `<div class="empty">مفيش تصميم بالكود ده. جرّب كود تاني أو اختار "الكل".</div>`; $('more').hidden = true; return; }
+  more();
+}
+function more() {
+  const next = list.slice(shown, shown + PAGE);
+  $('grid').insertAdjacentHTML('beforeend', next.map((d, i) => `<button class="tile" data-i="${shown + i}" aria-label="${esc(d.c)}">
+    <img src="img/t/${d.f}.webp" alt="${esc(d.c)}" loading="lazy" width="360" height="360">
+    <span class="code"><span dir="ltr">${esc(d.c)}</span><small>${esc(GROUPS[d.g] ? GROUPS[d.g].name : '')}</small></span></button>`).join(''));
+  shown += next.length;
+  $('more').hidden = shown >= list.length;
+}
+$('more').onclick = more;
+$('grid').addEventListener('click', (e) => { const t = e.target.closest('.tile'); if (t) open(+t.dataset.i); });
+let qTimer; $('q').addEventListener('input', (e) => { clearTimeout(qTimer); qTimer = setTimeout(() => { st.q = e.target.value.trim(); apply(); }, 150); });
+$('style').addEventListener('change', (e) => { st.s = e.target.value; apply(); });
+
+function open(i) {
+  if (i < 0 || i >= list.length) return;
+  cur = i; const d = list[i];
+  $('lb-img').src = `img/v/${d.f}.webp`; $('lb-img').alt = d.c;
+  $('lb-code').textContent = d.c;
+  $('lb-group').textContent = GROUPS[d.g] ? GROUPS[d.g].name : '';
+  $('lb-style').textContent = d.s && d.s !== 'marble' && d.s !== 'classic' && d.s !== 'classic-offsite' ? styleName(d.s) : '';
+  $('lb-wa').href = waLink(`السلام عليكم، عايز أطبع التصميم ${d.c} من كتالوج إنك فيوجن.\nالمقاس: \nالخامة: `);
+  $('lb-copy').textContent = 'انسخ الكود';
+  if (!$('lb').open) $('lb').showModal();
+}
+$('lb-close').onclick = () => $('lb').close();
+$('lb').addEventListener('click', (e) => { if (e.target === $('lb')) $('lb').close(); });
+$('lb-prev').onclick = () => open(cur - 1);
+$('lb-next').onclick = () => open(cur + 1);
+$('lb-copy').onclick = async () => { try { await navigator.clipboard.writeText(list[cur].c); $('lb-copy').textContent = '✓ اتنسخ'; } catch (e) { /* the code is on screen */ } };
+document.addEventListener('keydown', (e) => {
+  if (!$('lb').open) return;
+  if (e.key === 'ArrowLeft') open(cur + 1);          // RTL: left = next
+  if (e.key === 'ArrowRight') open(cur - 1);
+});
+let x0 = null;
+$('lb').addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+$('lb').addEventListener('touchend', (e) => { if (x0 === null) return; const dx = e.changedTouches[0].clientX - x0; if (Math.abs(dx) > 50) open(cur + (dx > 0 ? 1 : -1)); x0 = null; });
+
+window.addEventListener('hashchange', () => { fromHash(); renderGroups(); renderStyles(); apply(); });
+fromHash(); renderGroups(); renderStyles(); apply();
+</script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');</script>
+</body>
+</html>
